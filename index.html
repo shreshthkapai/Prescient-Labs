@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Process Mining Analysis</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+        h1 { color: #333; }
+        .chart { margin: 20px 0; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        a { color: #0066cc; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>Process Mining Analysis Dashboard</h1>
+    
+    <div class="chart">
+        <h2>Throughput Time Analysis</h2>
+        <iframe src="throughput_time_analysis.html" width="100%" height="600" frameborder="0"></iframe>
+    </div>
+    
+    <div class="chart">
+        <h2>Rework Analysis</h2>
+        <iframe src="rework_analysis.html" width="100%" height="600" frameborder="0"></iframe>
+    </div>
+    
+    <div class="chart">
+        <h2>Case Outcome Comparison</h2>
+        <iframe src="approved_vs_declined_vs_cancelled_comparison.html" width="100%" height="600" frameborder="0"></iframe>
+    </div>
+    
+    <div class="chart">
+        <h2>Direct Downloads</h2>
+        <ul>
+            <li><a href="throughput_time_analysis.html" target="_blank">Throughput Time (Interactive)</a></li>
+            <li><a href="rework_analysis.html" target="_blank">Rework Analysis (Interactive)</a></li>
+            <li><a href="approved_vs_declined_vs_cancelled_comparison.html" target="_blank">Outcome Comparison (Interactive)</a></li>
+        </ul>
+    </div>
+</body>
+</html>

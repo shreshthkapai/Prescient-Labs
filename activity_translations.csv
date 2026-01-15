@@ -1,0 +1,25 @@
+Dutch Activity,English Translation
+A_ACCEPTED,A_ACCEPTED
+A_ACTIVATED,A_ACTIVATED
+A_APPROVED,A_APPROVED
+A_CANCELLED,A_CANCELLED
+A_DECLINED,A_DECLINED
+A_FINALIZED,A_FINALIZED
+A_PARTLYSUBMITTED,A_PARTLYSUBMITTED
+A_PREACCEPTED,A_PREACCEPTED
+A_REGISTERED,A_REGISTERED
+A_SUBMITTED,A_SUBMITTED
+O_ACCEPTED,O_ACCEPTED
+O_CANCELLED,O_CANCELLED
+O_CREATED,O_CREATED
+O_DECLINED,O_DECLINED
+O_SELECTED,O_SELECTED
+O_SENT,O_SENT
+O_SENT_BACK,O_SENT_BACK
+W_Afhandelen leads,W_Handling leads
+W_Beoordelen fraude,W_Assess fraud
+W_Completeren aanvraag,W_Complete request
+W_Nabellen incomplete dossiers,W_Nabel incomplete files
+W_Nabellen offertes,W_After calling quotes
+W_Valideren aanvraag,W_Validate request
+W_Wijzigen contractgegevens,W_Change contract details
