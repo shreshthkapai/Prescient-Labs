@@ -8,7 +8,7 @@ from datetime import timedelta
 from deep_translator import GoogleTranslator
 
 # Loading Data
-# Strategy: Import XES log format to extract structured event data; validate schema completeness to ensure 
+# Import XES log format to extract structured event data, validate schema completeness to ensure 
 # all case IDs, activities, timestamps, and resources are properly captured for downstream process discovery.
 log = pm4py.read_xes('financial_log.xes')
 
@@ -21,7 +21,7 @@ print(f"\nTotal events in log: {len(log)}")
 print(f"Columns available: {log.columns.tolist()}")
 
 # Data Exploration
-# Objective: Understand activity taxonomy, temporal distribution, and baseline metrics; translate Dutch activity 
+# Understand activity taxonomy, temporal distribution, and baseline metrics, translate Dutch activity 
 # labels to English to improve interpretability and create a reference mapping for stakeholders.
 # Initialize language translator
 translator = GoogleTranslator(source='nl', target='en')
@@ -90,7 +90,7 @@ translations_df.to_csv('activity_translations.csv', index=False)
 print("Translations saved to 'activity_translations.csv'")
 
 # Throughput time analysis
-# Goal: Identify bottlenecks and process efficiency; measure cycle time distribution and detect outlier cases 
+# Identify bottlenecks and process efficienc, measure cycle time distribution and detect outlier cases 
 # that may indicate process deviations or compliance risks requiring investigation.
 # Calculating case durations
 case_durations = log.groupby('case:concept:name')['time:timestamp'].agg(['min', 'max'])
@@ -151,7 +151,7 @@ fig.write_html('throughput_time_analysis.html')
 print("Interactive throughput time saved as 'throughput_time_analysis.html'")
 
 # Rework Detection
-# Purpose: Quantify process inefficiencies by tracking repeated activities; identify rework hotspots that 
+# Quantify process inefficiencies by tracking repeated activities, identify rework hotspots that 
 # correlate with decision points or validation failures to target process improvement initiatives.
 activity_counts_per_case = log.groupby(['case:concept:name', 'concept:name']).size().reset_index(name='count')
 rework_cases = activity_counts_per_case[activity_counts_per_case['count'] > 1]
@@ -203,7 +203,7 @@ print(f"  Average rework events per case (for cases with rework): {total_rework_
 print(f"  Max rework events in a single case: {total_rework_per_case.max():.0f}")
 
 # Comparing approved vs declined vs cancelled cases
-# Approach: Segment process variants by outcome to uncover distinct pathways; compare throughput times and 
+# Segment process variants by outcome to uncover distinct pathways, compare throughput times and 
 # rework patterns across outcomes to identify risk factors and process characteristics that drive decisions.
 approved_cases = log[log['concept:name'].isin(['A_APPROVED', 'A_ACTIVATED'])]['case:concept:name'].unique()
 declined_cases = terminal_activities[terminal_activities.isin(['A_DECLINED'])].index
@@ -345,7 +345,7 @@ for i, (variant, cases) in enumerate(sorted_variants[:5], 1):
     print(f"    Path: {' → '.join(variant)}")
 
 # Waiting Time Analysis
-# Objective: Measure inter-activity delays to identify process queues and resource constraints; isolate 
+# Measure inter-activity delays to identify process queues and resource constraints, isolate 
 # activities with excessive waiting times that could indicate handoff inefficiencies or approval backlogs.
 print(f"\nWaiting Time Analysis:")
 log_sorted = log.sort_values(['case:concept:name', 'time:timestamp'])
@@ -364,7 +364,7 @@ for activity, row in waiting_by_activity.head(10).iterrows():
     print(f"    Mean: {row['mean']:.2f}h | Median: {row['median']:.2f}h | Max: {row['max']:.2f}h")
 
 # Activity Duration Analysis
-# Strategy: Measure execution time per activity to establish performance baselines; identify activities with 
+# Measure execution time per activity to establish performance baselines, identify activities with 
 # high variance that may indicate process complexity, skill gaps, or inconsistent execution patterns.
 print(f"\nActivity Duration Analysis:")
 activity_start = log[log['lifecycle:transition'] == 'START'][['case:concept:name', 'concept:name', 'time:timestamp']].copy()
@@ -387,7 +387,7 @@ for activity, row in duration_stats.head(10).iterrows():
     print(f"    Mean: {row['mean']:.2f}m | Median: {row['median']:.2f}m | Max: {row['max']:.2f}m")
 
 # Time-based Patterns
-# Goal: Analyze temporal correlations between submission timing (day/hour) and approval outcomes; detect 
+# Analyze temporal correlations between submission timing (day/hour) and approval outcomes, detect 
 # potential fairness issues or resource availability effects on decision consistency across time periods.
 print(f"\nTime-based Patterns:")
 log['submission_date'] = pd.to_datetime(log.groupby('case:concept:name')['time:timestamp'].transform('min'))
@@ -420,7 +420,7 @@ for hour, rate in hour_analysis.items():
     print(f"  Hour {hour:02d}: {rate:.1f}% approval rate")
 
 # Create index.html for GitHub Pages
-# Purpose: Consolidate interactive visualizations into a single dashboard for stakeholder communication; 
+# Consolidate interactive visualizations into a single dashboard for stakeholder communication; 
 # enable easy navigation and sharing of analytical findings without requiring technical setup.
 index_html = """<!DOCTYPE html>
 <html>
