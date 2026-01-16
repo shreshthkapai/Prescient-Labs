@@ -1,40 +1,246 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Process Mining Analysis</title>
+    <title>Process Mining Analysis Dashboard</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
-        h1 { color: #333; }
-        .chart { margin: 20px 0; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        a { color: #0066cc; text-decoration: none; }
-        a:hover { text-decoration: underline; }
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0;
+            padding: 0;
+            background: #f5f5f5; 
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { 
+            margin: 0;
+            font-size: 2.5em;
+        }
+        .subtitle {
+            margin-top: 10px;
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .chart { 
+            margin: 20px 0; 
+            padding: 25px; 
+            background: white; 
+            border-radius: 12px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .chart:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+        .chart h2 {
+            color: #333;
+            margin-top: 0;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .chart iframe {
+            border: none;
+            border-radius: 8px;
+        }
+        .section-header {
+            background: white;
+            margin: 30px 0 20px 0;
+            padding: 20px 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .section-header h2 {
+            margin: 0;
+            color: #667eea;
+            font-size: 1.8em;
+        }
+        .section-header p {
+            margin: 10px 0 0 0;
+            color: #666;
+            font-size: 1.1em;
+        }
+        .download-section {
+            background: white;
+            margin: 20px 0;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .download-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .download-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .download-link {
+            display: block;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .download-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .footer {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+            background: white;
+            margin-top: 40px;
+            border-radius: 12px;
+        }
     </style>
 </head>
 <body>
-    <h1>Process Mining Analysis Dashboard</h1>
-    
-    <div class="chart">
-        <h2>Throughput Time Analysis</h2>
-        <iframe src="throughput_time_analysis.html" width="100%" height="600" frameborder="0"></iframe>
+    <div class="header">
+        <h1>Process Mining Analysis Dashboard</h1>
+        <div class="subtitle">Comprehensive Financial Loan Application Process Analysis</div>
     </div>
     
-    <div class="chart">
-        <h2>Rework Analysis</h2>
-        <iframe src="rework_analysis.html" width="100%" height="600" frameborder="0"></iframe>
-    </div>
-    
-    <div class="chart">
-        <h2>Case Outcome Comparison</h2>
-        <iframe src="approved_vs_declined_vs_cancelled_comparison.html" width="100%" height="600" frameborder="0"></iframe>
-    </div>
-    
-    <div class="chart">
-        <h2>Direct Downloads</h2>
-        <ul>
-            <li><a href="throughput_time_analysis.html" target="_blank">Throughput Time (Interactive)</a></li>
-            <li><a href="rework_analysis.html" target="_blank">Rework Analysis (Interactive)</a></li>
-            <li><a href="approved_vs_declined_vs_cancelled_comparison.html" target="_blank">Outcome Comparison (Interactive)</a></li>
-        </ul>
+    <div class="container">
+        <!-- Process Flow Section -->
+        <div class="section-header">
+            <h2>Process Flow Analysis</h2>
+            <p>Visualize the complete loan application process flow with frequency metrics</p>
+        </div>
+        
+        <div class="chart">
+            <h2>Interactive Process Map (Directly-Follows Graph)</h2>
+            <iframe src="process_map_dfg.html" width="100%" height="700"></iframe>
+        </div>
+        
+        <!-- Performance Metrics Section -->
+        <div class="section-header">
+            <h2>Performance Metrics</h2>
+            <p>Analyze throughput times, waiting times, and activity durations</p>
+        </div>
+        
+        <div class="chart">
+            <h2>Throughput Time Analysis</h2>
+            <iframe src="throughput_time_analysis.html" width="100%" height="600"></iframe>
+        </div>
+        
+        <div class="chart">
+            <h2>Waiting Time Analysis</h2>
+            <iframe src="waiting_time_analysis.html" width="100%" height="600"></iframe>
+        </div>
+        
+        <div class="chart">
+            <h2>Activity Duration Analysis</h2>
+            <iframe src="activity_duration_analysis.html" width="100%" height="600"></iframe>
+        </div>
+        
+        <!-- Quality Metrics Section -->
+        <div class="section-header">
+            <h2>Quality Metrics</h2>
+            <p>Identify rework patterns and process inefficiencies</p>
+        </div>
+        
+        <div class="chart">
+            <h2>Rework Analysis</h2>
+            <iframe src="rework_analysis.html" width="100%" height="600"></iframe>
+        </div>
+        
+        <div class="chart">
+            <h2>Rework Comparison by Outcome</h2>
+            <iframe src="rework_comparison_by_outcome.html" width="100%" height="600"></iframe>
+        </div>
+        
+        <!-- Outcome Analysis Section -->
+        <div class="section-header">
+            <h2>Outcome Analysis</h2>
+            <p>Compare approved, declined, and cancelled cases</p>
+        </div>
+        
+        <div class="chart">
+            <h2>Case Outcome Comparison</h2>
+            <iframe src="approved_vs_declined_vs_cancelled_comparison.html" width="100%" height="600"></iframe>
+        </div>
+        
+        <!-- Resource Analysis Section -->
+        <div class="section-header">
+            <h2>Resource Analysis</h2>
+            <p>Examine workload distribution and resource utilization</p>
+        </div>
+        
+        <div class="chart">
+            <h2>Resource Workload Analysis</h2>
+            <iframe src="resource_workload_analysis.html" width="100%" height="600"></iframe>
+        </div>
+        
+        <!-- Variant Analysis Section -->
+        <div class="section-header">
+            <h2>Variant Analysis</h2>
+            <p>Explore process complexity and path diversity</p>
+        </div>
+        
+        <div class="chart">
+            <h2>Process Variant Distribution</h2>
+            <iframe src="variant_distribution.html" width="100%" height="600"></iframe>
+        </div>
+        
+        <!-- Temporal Patterns Section -->
+        <div class="section-header">
+            <h2>Temporal Patterns</h2>
+            <p>Discover time-based trends and approval patterns</p>
+        </div>
+        
+        <div class="chart">
+            <h2>Outcomes by Day of Week</h2>
+            <iframe src="outcomes_by_day_of_week.html" width="100%" height="600"></iframe>
+        </div>
+        
+        <div class="chart">
+            <h2>Outcomes by Hour of Day</h2>
+            <iframe src="outcomes_by_hour_of_day.html" width="100%" height="600"></iframe>
+        </div>
+        
+        <div class="chart">
+            <h2>Approval Rate Heatmap</h2>
+            <iframe src="approval_rate_heatmap.html" width="100%" height="600"></iframe>
+        </div>
+        
+        <!-- Downloads Section -->
+        <div class="download-section">
+            <h3>Download Individual Visualizations</h3>
+            <div class="download-grid">
+                <a href="process_map_dfg.html" target="_blank" class="download-link">Process Map (DFG)</a>
+                <a href="throughput_time_analysis.html" target="_blank" class="download-link">Throughput Time</a>
+                <a href="waiting_time_analysis.html" target="_blank" class="download-link">Waiting Time</a>
+                <a href="activity_duration_analysis.html" target="_blank" class="download-link">Activity Duration</a>
+                <a href="rework_analysis.html" target="_blank" class="download-link">Rework Analysis</a>
+                <a href="rework_comparison_by_outcome.html" target="_blank" class="download-link">Rework by Outcome</a>
+                <a href="approved_vs_declined_vs_cancelled_comparison.html" target="_blank" class="download-link">Outcome Comparison</a>
+                <a href="resource_workload_analysis.html" target="_blank" class="download-link">Resource Workload</a>
+                <a href="variant_distribution.html" target="_blank" class="download-link">Variant Distribution</a>
+                <a href="outcomes_by_day_of_week.html" target="_blank" class="download-link">Outcomes by Day</a>
+                <a href="outcomes_by_hour_of_day.html" target="_blank" class="download-link">Outcomes by Hour</a>
+                <a href="approval_rate_heatmap.html" target="_blank" class="download-link">Approval Heatmap</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Generated with PM4Py | Interactive visualizations powered by Plotly</p>
+            <p>© 2024 Process Mining Analysis Dashboard</p>
+        </div>
     </div>
 </body>
 </html>

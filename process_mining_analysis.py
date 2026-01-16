@@ -6,6 +6,7 @@ import plotly.express as px
 import numpy as np
 from datetime import timedelta
 from deep_translator import GoogleTranslator
+import networkx as nx
 
 # Loading Data
 # Import XES log format to extract structured event data, validate schema completeness to ensure 
@@ -82,6 +83,141 @@ dfg = dfg_discovery.apply(log)
 gviz = dfg_visualization.apply(dfg, log=log, variant=dfg_visualization.Variants.FREQUENCY)
 dfg_visualization.save(gviz, "process_map_dfg.png")
 print("DFG saved as 'process_map_dfg.png'")
+
+# Save translations to file for reference
+translations_df = pd.DataFrame(list(activity_translations.items()), 
+                               columns=['Dutch Activity', 'English Translation'])
+translations_df.to_csv('activity_translations.csv', index=False)
+print("Translations saved to 'activity_translations.csv'")
+
+# Create interactive version of DFG using network graph visualization to enable exploration of process 
+# flows with hover details, zoom capabilities, and dynamic filtering for improved stakeholder engagement.
+start_activities = pm4py.get_start_activities(log)
+end_activities = pm4py.get_end_activities(log)
+
+# Extract nodes and edges from DFG
+nodes = set()
+edges = []
+for (source, target), freq in dfg.items():
+    nodes.add(source)
+    nodes.add(target)
+    edges.append({
+        'source': source,
+        'target': target,
+        'frequency': freq
+    })
+
+# Add start and end markers
+for activity, freq in start_activities.items():
+    nodes.add(activity)
+    edges.append({
+        'source': 'START',
+        'target': activity,
+        'frequency': freq
+    })
+nodes.add('START')
+
+for activity, freq in end_activities.items():
+    nodes.add(activity)
+    edges.append({
+        'source': activity,
+        'target': 'END',
+        'frequency': freq
+    })
+nodes.add('END')
+
+# Create network graph for layout
+G = nx.DiGraph()
+for node in nodes:
+    G.add_node(node)
+for edge in edges:
+    G.add_edge(edge['source'], edge['target'], weight=edge['frequency'])
+
+# Use hierarchical layout
+pos = nx.spring_layout(G, k=2, iterations=50, seed=42)
+
+# Create edge traces
+edge_traces = []
+for edge in edges:
+    x0, y0 = pos[edge['source']]
+    x1, y1 = pos[edge['target']]
+    
+    # Calculate edge width based on frequency
+    max_freq = max([e['frequency'] for e in edges])
+    edge_width = 1 + (edge['frequency'] / max_freq) * 5
+    
+    edge_trace = go.Scatter(
+        x=[x0, x1, None],
+        y=[y0, y1, None],
+        mode='lines',
+        line=dict(width=edge_width, color='#888'),
+        hoverinfo='text',
+        text=f"{edge['source']} → {edge['target']}<br>Frequency: {edge['frequency']}",
+        showlegend=False
+    )
+    edge_traces.append(edge_trace)
+
+# Create node trace
+node_x = []
+node_y = []
+node_text = []
+node_colors = []
+node_sizes = []
+
+for node in nodes:
+    x, y = pos[node]
+    node_x.append(x)
+    node_y.append(y)
+    
+    # Get node frequency (sum of incoming edges)
+    node_freq = sum([e['frequency'] for e in edges if e['target'] == node])
+    node_sizes.append(20 + (node_freq / max([sum([e['frequency'] for e in edges if e['target'] == n]) for n in nodes]) * 30))
+    
+    # Color coding
+    if node == 'START':
+        node_colors.append('lightgreen')
+    elif node == 'END':
+        node_colors.append('lightcoral')
+    else:
+        node_colors.append('lightblue')
+    
+    # Add translation to hover text
+    translated = activity_translations.get(node, node)
+    if translated != node:
+        node_text.append(f"{node}<br>{translated}<br>Frequency: {node_freq}")
+    else:
+        node_text.append(f"{node}<br>Frequency: {node_freq}")
+
+node_trace = go.Scatter(
+    x=node_x,
+    y=node_y,
+    mode='markers+text',
+    hoverinfo='text',
+    text=[n[:15] + '...' if len(n) > 15 else n for n in nodes],
+    hovertext=node_text,
+    textposition="top center",
+    marker=dict(
+        size=node_sizes,
+        color=node_colors,
+        line=dict(width=2, color='#333')
+    ),
+    showlegend=False
+)
+
+# Create figure
+fig = go.Figure(data=edge_traces + [node_trace],
+                layout=go.Layout(
+                    title=dict(text='Interactive Process Map (Directly-Follows Graph)', font=dict(size=16)),
+                    showlegend=False,
+                    hovermode='closest',
+                    margin=dict(b=20, l=5, r=5, t=40),
+                    xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                    yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                    plot_bgcolor='white'
+                ))
+
+fig.write_html('process_map_dfg.html')
+print("Interactive DFG saved as 'process_map_dfg.html'")
 
 # Save translations to file for reference
 translations_df = pd.DataFrame(list(activity_translations.items()), 
@@ -322,8 +458,38 @@ print(f"  Approved cases with rework: {len(approved_rework_cases['case:concept:n
 print(f"  Declined cases with rework: {len(declined_rework_cases['case:concept:name'].unique())} ({declined_rework_rate:.1f}%)")
 print(f"  Cancelled cases with rework: {len(cancelled_rework_cases['case:concept:name'].unique())} ({cancelled_rework_rate:.1f}%)")
 
-# Resource Analysis
+# Create interactive visualization for rework comparison across outcomes to enable drill-down analysis 
+# of process quality metrics and identify outcome-specific inefficiency patterns requiring intervention.
+rework_comparison_data = pd.DataFrame({
+    'Outcome': ['Approved', 'Declined', 'Cancelled'],
+    'Rework Rate (%)': [approved_rework_rate, declined_rework_rate, cancelled_rework_rate],
+    'Cases with Rework': [
+        len(approved_rework_cases['case:concept:name'].unique()),
+        len(declined_rework_cases['case:concept:name'].unique()),
+        len(cancelled_rework_cases['case:concept:name'].unique())
+    ]
+})
 
+fig = go.Figure()
+fig.add_trace(go.Bar(
+    x=rework_comparison_data['Outcome'],
+    y=rework_comparison_data['Rework Rate (%)'],
+    text=rework_comparison_data['Rework Rate (%)'].round(1),
+    textposition='auto',
+    marker_color=['green', 'red', 'orange'],
+    hovertemplate='%{x}<br>Rework Rate: %{y:.1f}%<br>Cases: %{customdata}<extra></extra>',
+    customdata=rework_comparison_data['Cases with Rework']
+))
+fig.update_layout(
+    title='Rework Rate Comparison by Outcome',
+    xaxis_title='Case Outcome',
+    yaxis_title='Rework Rate (%)',
+    showlegend=False
+)
+fig.write_html('rework_comparison_by_outcome.html')
+print("Interactive rework comparison saved as 'rework_comparison_by_outcome.html'")
+
+# Resource Analysis
 print(f"\nResource Analysis:")
 resource_workload = log.groupby('org:resource').size().sort_values(ascending=False)
 print(f"  Total unique resources: {log['org:resource'].nunique()}")
@@ -332,8 +498,23 @@ for resource, count in resource_workload.head(10).items():
     if pd.notna(resource):
         print(f"  Resource {resource}: {count} events")
 
-# Variant Analysis
+# Create interactive resource workload visualization to identify capacity constraints and workload 
+# imbalances across team members, enabling data-driven resource allocation and training prioritization.
+resource_df = pd.DataFrame({
+    'Resource': resource_workload.head(15).index,
+    'Event Count': resource_workload.head(15).values
+})
 
+fig = px.bar(resource_df, x='Resource', y='Event Count',
+             title='Top 15 Resources by Workload',
+             labels={'Event Count': 'Number of Events'},
+             color='Event Count',
+             color_continuous_scale='Blues')
+fig.update_layout(xaxis_tickangle=-45)
+fig.write_html('resource_workload_analysis.html')
+print("Interactive resource workload saved as 'resource_workload_analysis.html'")
+
+# Variant Analysis
 from pm4py.algo.filtering.log.variants import variants_filter
 variants = variants_filter.get_variants(log)
 print(f"\nVariant Analysis:")
@@ -343,6 +524,19 @@ sorted_variants = sorted(variants.items(), key=lambda x: len(x[1]), reverse=True
 for i, (variant, cases) in enumerate(sorted_variants[:5], 1):
     print(f"\n  Variant {i} ({len(cases)} cases):")
     print(f"    Path: {' → '.join(variant)}")
+
+# Create interactive variant frequency distribution to visualize process conformance and complexity, 
+# highlighting the concentration of cases in standard paths versus long-tail variant proliferation.
+variant_counts = [(len(cases), i+1) for i, (variant, cases) in enumerate(sorted_variants)]
+variant_df = pd.DataFrame(variant_counts, columns=['Case Count', 'Variant Rank'])
+
+fig = px.scatter(variant_df, x='Variant Rank', y='Case Count',
+                 title='Process Variant Distribution',
+                 labels={'Variant Rank': 'Variant (Ranked by Frequency)', 'Case Count': 'Number of Cases'},
+                 log_y=True)
+fig.update_traces(marker=dict(size=8, color='steelblue', line=dict(width=1, color='darkblue')))
+fig.write_html('variant_distribution.html')
+print("Interactive variant distribution saved as 'variant_distribution.html'")
 
 # Waiting Time Analysis
 # Measure inter-activity delays to identify process queues and resource constraints, isolate 
@@ -363,6 +557,33 @@ for activity, row in waiting_by_activity.head(10).iterrows():
         print(f"    → {translated}")
     print(f"    Mean: {row['mean']:.2f}h | Median: {row['median']:.2f}h | Max: {row['max']:.2f}h")
 
+# Create interactive waiting time visualization to enable identification of bottleneck activities 
+# and queue buildup patterns, supporting targeted interventions to reduce cycle time variability.
+waiting_top = waiting_by_activity.head(15).reset_index()
+waiting_top['Activity'] = waiting_top['concept:name'].apply(lambda x: x[:30] + '...' if len(x) > 30 else x)
+
+fig = go.Figure()
+fig.add_trace(go.Bar(
+    x=waiting_top['Activity'],
+    y=waiting_top['mean'],
+    name='Mean',
+    marker_color='indianred',
+    error_y=dict(
+        type='data',
+        symmetric=False,
+        array=waiting_top['max'] - waiting_top['mean'],
+        arrayminus=waiting_top['mean'] - waiting_top['median']
+    )
+))
+fig.update_layout(
+    title='Top 15 Activities by Waiting Time',
+    xaxis_title='Activity',
+    yaxis_title='Mean Waiting Time (hours)',
+    xaxis_tickangle=-45
+)
+fig.write_html('waiting_time_analysis.html')
+print("Interactive waiting time analysis saved as 'waiting_time_analysis.html'")
+
 # Activity Duration Analysis
 # Measure execution time per activity to establish performance baselines, identify activities with 
 # high variance that may indicate process complexity, skill gaps, or inconsistent execution patterns.
@@ -376,7 +597,7 @@ activity_complete.columns = ['case:concept:name', 'concept:name', 'complete_time
 activity_durations = pd.merge(activity_start, activity_complete, on=['case:concept:name', 'concept:name'])
 activity_durations['duration'] = (activity_durations['complete_time'] - activity_durations['start_time']).dt.total_seconds() / 60
 
-duration_stats = activity_durations.groupby('concept:name')['duration'].agg(['mean', 'median', 'max']).sort_values('mean', ascending=False)
+duration_stats = activity_durations.groupby('concept:name')['duration'].agg(['mean', 'median', 'max', 'std']).sort_values('mean', ascending=False)
 
 print(f"\nTop 10 Activities by Duration (minutes):")
 for activity, row in duration_stats.head(10).iterrows():
@@ -385,6 +606,34 @@ for activity, row in duration_stats.head(10).iterrows():
     if translated != activity:
         print(f"    → {translated}")
     print(f"    Mean: {row['mean']:.2f}m | Median: {row['median']:.2f}m | Max: {row['max']:.2f}m")
+
+# Create interactive activity duration visualization with variance metrics to highlight performance 
+# inconsistencies and training opportunities, enabling process standardization and efficiency gains.
+duration_top = duration_stats.head(15).reset_index()
+duration_top['Activity'] = duration_top['concept:name'].apply(lambda x: x[:30] + '...' if len(x) > 30 else x)
+
+fig = go.Figure()
+fig.add_trace(go.Bar(
+    x=duration_top['Activity'],
+    y=duration_top['mean'],
+    name='Mean Duration',
+    marker_color='steelblue',
+    error_y=dict(
+        type='data',
+        array=duration_top['std'],
+        visible=True
+    ),
+    hovertemplate='%{x}<br>Mean: %{y:.2f}m<br>Std: %{customdata:.2f}m<extra></extra>',
+    customdata=duration_top['std']
+))
+fig.update_layout(
+    title='Top 15 Activities by Duration (with Standard Deviation)',
+    xaxis_title='Activity',
+    yaxis_title='Mean Duration (minutes)',
+    xaxis_tickangle=-45
+)
+fig.write_html('activity_duration_analysis.html')
+print("Interactive activity duration analysis saved as 'activity_duration_analysis.html'")
 
 # Time-based Patterns
 # Analyze temporal correlations between submission timing (day/hour) and approval outcomes, detect 
@@ -419,51 +668,311 @@ hour_analysis = case_outcomes.groupby('hour_of_day')['outcome'].apply(
 for hour, rate in hour_analysis.items():
     print(f"  Hour {hour:02d}: {rate:.1f}% approval rate")
 
-# Create index.html for GitHub Pages
+# Create interactive temporal pattern visualizations to reveal time-dependent approval biases and 
+# resource availability impacts, supporting fairness audits and capacity planning initiatives.
+# Day of week analysis
+day_outcome_counts = case_outcomes.groupby(['day_of_week', 'outcome']).size().reset_index(name='count')
+day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+day_outcome_counts['day_of_week'] = pd.Categorical(day_outcome_counts['day_of_week'], categories=day_order, ordered=True)
+day_outcome_counts = day_outcome_counts.sort_values('day_of_week')
+
+fig = px.bar(day_outcome_counts, x='day_of_week', y='count', color='outcome',
+             title='Case Outcomes by Day of Week',
+             labels={'day_of_week': 'Day of Week', 'count': 'Number of Cases'},
+             color_discrete_map={'Approved': 'green', 'Declined': 'red', 'Cancelled': 'orange', 'Other': 'gray'})
+fig.write_html('outcomes_by_day_of_week.html')
+print("Interactive day of week analysis saved as 'outcomes_by_day_of_week.html'")
+
+# Hour of day analysis
+hour_outcome_counts = case_outcomes.groupby(['hour_of_day', 'outcome']).size().reset_index(name='count')
+
+fig = px.bar(hour_outcome_counts, x='hour_of_day', y='count', color='outcome',
+             title='Case Outcomes by Hour of Day',
+             labels={'hour_of_day': 'Hour of Day', 'count': 'Number of Cases'},
+             color_discrete_map={'Approved': 'green', 'Declined': 'red', 'Cancelled': 'orange', 'Other': 'gray'})
+fig.update_xaxes(dtick=1)
+fig.write_html('outcomes_by_hour_of_day.html')
+print("Interactive hour of day analysis saved as 'outcomes_by_hour_of_day.html'")
+
+# Approval rate heatmap by day and hour
+approval_heatmap = case_outcomes.groupby(['day_of_week', 'hour_of_day'])['outcome'].apply(
+    lambda x: (x == 'Approved').sum() / len(x) * 100 if len(x) > 0 else 0
+).reset_index(name='approval_rate')
+approval_heatmap['day_of_week'] = pd.Categorical(approval_heatmap['day_of_week'], categories=day_order, ordered=True)
+approval_heatmap = approval_heatmap.sort_values('day_of_week')
+
+pivot_data = approval_heatmap.pivot(index='day_of_week', columns='hour_of_day', values='approval_rate')
+
+fig = go.Figure(data=go.Heatmap(
+    z=pivot_data.values,
+    x=pivot_data.columns,
+    y=pivot_data.index,
+    colorscale='RdYlGn',
+    text=pivot_data.values.round(1),
+    texttemplate='%{text}%',
+    textfont={"size": 10},
+    colorbar=dict(title="Approval Rate (%)")
+))
+fig.update_layout(
+    title='Approval Rate Heatmap: Day of Week vs Hour of Day',
+    xaxis_title='Hour of Day',
+    yaxis_title='Day of Week',
+    xaxis=dict(dtick=1)
+)
+fig.write_html('approval_rate_heatmap.html')
+print("Interactive approval rate heatmap saved as 'approval_rate_heatmap.html'")
+
+# Create comprehensive index.html for GitHub Pages
 # Consolidate interactive visualizations into a single dashboard for stakeholder communication; 
 # enable easy navigation and sharing of analytical findings without requiring technical setup.
 index_html = """<!DOCTYPE html>
 <html>
 <head>
-    <title>Process Mining Analysis</title>
+    <title>Process Mining Analysis Dashboard</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
-        h1 { color: #333; }
-        .chart { margin: 20px 0; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        a { color: #0066cc; text-decoration: none; }
-        a:hover { text-decoration: underline; }
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0;
+            padding: 0;
+            background: #f5f5f5; 
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { 
+            margin: 0;
+            font-size: 2.5em;
+        }
+        .subtitle {
+            margin-top: 10px;
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .chart { 
+            margin: 20px 0; 
+            padding: 25px; 
+            background: white; 
+            border-radius: 12px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .chart:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+        .chart h2 {
+            color: #333;
+            margin-top: 0;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .chart iframe {
+            border: none;
+            border-radius: 8px;
+        }
+        .section-header {
+            background: white;
+            margin: 30px 0 20px 0;
+            padding: 20px 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .section-header h2 {
+            margin: 0;
+            color: #667eea;
+            font-size: 1.8em;
+        }
+        .section-header p {
+            margin: 10px 0 0 0;
+            color: #666;
+            font-size: 1.1em;
+        }
+        .download-section {
+            background: white;
+            margin: 20px 0;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .download-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .download-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .download-link {
+            display: block;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .download-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .footer {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+            background: white;
+            margin-top: 40px;
+            border-radius: 12px;
+        }
     </style>
 </head>
 <body>
-    <h1>Process Mining Analysis Dashboard</h1>
-    
-    <div class="chart">
-        <h2>Throughput Time Analysis</h2>
-        <iframe src="throughput_time_analysis.html" width="100%" height="600" frameborder="0"></iframe>
+    <div class="header">
+        <h1>Process Mining Analysis Dashboard</h1>
+        <div class="subtitle">Comprehensive Financial Loan Application Process Analysis</div>
     </div>
     
-    <div class="chart">
-        <h2>Rework Analysis</h2>
-        <iframe src="rework_analysis.html" width="100%" height="600" frameborder="0"></iframe>
-    </div>
-    
-    <div class="chart">
-        <h2>Case Outcome Comparison</h2>
-        <iframe src="approved_vs_declined_vs_cancelled_comparison.html" width="100%" height="600" frameborder="0"></iframe>
-    </div>
-    
-    <div class="chart">
-        <h2>Direct Downloads</h2>
-        <ul>
-            <li><a href="throughput_time_analysis.html" target="_blank">Throughput Time (Interactive)</a></li>
-            <li><a href="rework_analysis.html" target="_blank">Rework Analysis (Interactive)</a></li>
-            <li><a href="approved_vs_declined_vs_cancelled_comparison.html" target="_blank">Outcome Comparison (Interactive)</a></li>
-        </ul>
+    <div class="container">
+        <!-- Process Flow Section -->
+        <div class="section-header">
+            <h2>Process Flow Analysis</h2>
+            <p>Visualize the complete loan application process flow with frequency metrics</p>
+        </div>
+        
+        <div class="chart">
+            <h2>Interactive Process Map (Directly-Follows Graph)</h2>
+            <iframe src="process_map_dfg.html" width="100%" height="700"></iframe>
+        </div>
+        
+        <!-- Performance Metrics Section -->
+        <div class="section-header">
+            <h2>Performance Metrics</h2>
+            <p>Analyze throughput times, waiting times, and activity durations</p>
+        </div>
+        
+        <div class="chart">
+            <h2>Throughput Time Analysis</h2>
+            <iframe src="throughput_time_analysis.html" width="100%" height="600"></iframe>
+        </div>
+        
+        <div class="chart">
+            <h2>Waiting Time Analysis</h2>
+            <iframe src="waiting_time_analysis.html" width="100%" height="600"></iframe>
+        </div>
+        
+        <div class="chart">
+            <h2>Activity Duration Analysis</h2>
+            <iframe src="activity_duration_analysis.html" width="100%" height="600"></iframe>
+        </div>
+        
+        <!-- Quality Metrics Section -->
+        <div class="section-header">
+            <h2>Quality Metrics</h2>
+            <p>Identify rework patterns and process inefficiencies</p>
+        </div>
+        
+        <div class="chart">
+            <h2>Rework Analysis</h2>
+            <iframe src="rework_analysis.html" width="100%" height="600"></iframe>
+        </div>
+        
+        <div class="chart">
+            <h2>Rework Comparison by Outcome</h2>
+            <iframe src="rework_comparison_by_outcome.html" width="100%" height="600"></iframe>
+        </div>
+        
+        <!-- Outcome Analysis Section -->
+        <div class="section-header">
+            <h2>Outcome Analysis</h2>
+            <p>Compare approved, declined, and cancelled cases</p>
+        </div>
+        
+        <div class="chart">
+            <h2>Case Outcome Comparison</h2>
+            <iframe src="approved_vs_declined_vs_cancelled_comparison.html" width="100%" height="600"></iframe>
+        </div>
+        
+        <!-- Resource Analysis Section -->
+        <div class="section-header">
+            <h2>Resource Analysis</h2>
+            <p>Examine workload distribution and resource utilization</p>
+        </div>
+        
+        <div class="chart">
+            <h2>Resource Workload Analysis</h2>
+            <iframe src="resource_workload_analysis.html" width="100%" height="600"></iframe>
+        </div>
+        
+        <!-- Variant Analysis Section -->
+        <div class="section-header">
+            <h2>Variant Analysis</h2>
+            <p>Explore process complexity and path diversity</p>
+        </div>
+        
+        <div class="chart">
+            <h2>Process Variant Distribution</h2>
+            <iframe src="variant_distribution.html" width="100%" height="600"></iframe>
+        </div>
+        
+        <!-- Temporal Patterns Section -->
+        <div class="section-header">
+            <h2>Temporal Patterns</h2>
+            <p>Discover time-based trends and approval patterns</p>
+        </div>
+        
+        <div class="chart">
+            <h2>Outcomes by Day of Week</h2>
+            <iframe src="outcomes_by_day_of_week.html" width="100%" height="600"></iframe>
+        </div>
+        
+        <div class="chart">
+            <h2>Outcomes by Hour of Day</h2>
+            <iframe src="outcomes_by_hour_of_day.html" width="100%" height="600"></iframe>
+        </div>
+        
+        <div class="chart">
+            <h2>Approval Rate Heatmap</h2>
+            <iframe src="approval_rate_heatmap.html" width="100%" height="600"></iframe>
+        </div>
+        
+        <!-- Downloads Section -->
+        <div class="download-section">
+            <h3>Download Individual Visualizations</h3>
+            <div class="download-grid">
+                <a href="process_map_dfg.html" target="_blank" class="download-link">Process Map (DFG)</a>
+                <a href="throughput_time_analysis.html" target="_blank" class="download-link">Throughput Time</a>
+                <a href="waiting_time_analysis.html" target="_blank" class="download-link">Waiting Time</a>
+                <a href="activity_duration_analysis.html" target="_blank" class="download-link">Activity Duration</a>
+                <a href="rework_analysis.html" target="_blank" class="download-link">Rework Analysis</a>
+                <a href="rework_comparison_by_outcome.html" target="_blank" class="download-link">Rework by Outcome</a>
+                <a href="approved_vs_declined_vs_cancelled_comparison.html" target="_blank" class="download-link">Outcome Comparison</a>
+                <a href="resource_workload_analysis.html" target="_blank" class="download-link">Resource Workload</a>
+                <a href="variant_distribution.html" target="_blank" class="download-link">Variant Distribution</a>
+                <a href="outcomes_by_day_of_week.html" target="_blank" class="download-link">Outcomes by Day</a>
+                <a href="outcomes_by_hour_of_day.html" target="_blank" class="download-link">Outcomes by Hour</a>
+                <a href="approval_rate_heatmap.html" target="_blank" class="download-link">Approval Heatmap</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Generated with PM4Py | Interactive visualizations powered by Plotly</p>
+            <p>© 2024 Process Mining Analysis Dashboard</p>
+        </div>
     </div>
 </body>
 </html>
 """
 
-with open('index.html', 'w') as f:
+with open('index.html', 'w', encoding='utf-8') as f:
     f.write(index_html)
-print("\nindex.html created for GitHub Pages")
+print("\index.html created for GitHub Pages.")
